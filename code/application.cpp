@@ -13,12 +13,18 @@
 #include "shaderCode.cpp"
 #include "models.cpp"
 
-// NOTE: Ignore most of the following code. It's just some sample code, to display 
-// the score with. Some interesting bits have comments, which you can read. Skip to
-// line 195 for the score example! 
+unsigned int map[13 * 8] = {
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    2, 2, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    1, 1, 1, 1, 2, 0, 0, 0, 2, 2, 2, 0, 0,
+    1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 2, 2,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+};
 
-// NOTE: This is the source file for the score library
-#include "score.cpp" 
+glm::vec3 cameraPosition(0.0f, 0.0f, 0.0f);
 
 static unsigned int 
 compileAndLinkShaderProgram(char *vertexShaderCode, char *fragmentShaderCode)
@@ -68,10 +74,6 @@ compileAndLinkShaderProgram(char *vertexShaderCode, char *fragmentShaderCode)
         result = -1;
     }
 
-    // NOTE: No one ever detaches the compiled shaders, but (according to 
-    // the docs) a compiled shader _cannot_ be deleted unless it's detached 
-    // from all programs.
-    // Refer to: http://docs.gl/gl4/glDeleteShader
     glDetachShader(shaderProgram, vertexShader);
     glDetachShader(shaderProgram, fragmentShader);
     glDeleteShader(vertexShader);
@@ -87,6 +89,14 @@ processInput(GLFWwindow *window)
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
     {
         glfwSetWindowShouldClose(window, true);
+    } 
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+    {  
+        cameraPosition.x += 20;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+    {
+        cameraPosition.x -= 20;
     }
 }
 
@@ -108,90 +118,9 @@ int main(void)
         return(-1);
     }
 
-    glEnable(GL_DEPTH_TEST);
+    unsigned int shaderProgram = 
+        compileAndLinkShaderProgram(quadVertexShaderCode, quadFragmentShaderCode);
 
-    unsigned int sceneShaderProgram = 
-        compileAndLinkShaderProgram(cubeVertexShaderCode, cubeFragmentShaderCode);
-
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // wrapping and filters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("container.jpg", &width, &height, &nrChannels, 0);
-    if(data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else 
-    {
-        printf("Failed to load texture!\n");
-    }
-    stbi_image_free(data);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    unsigned int texture2;
-    glGenTextures(1, &texture2);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    // wrapping and filters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    stbi_set_flip_vertically_on_load(true);
-    data = stbi_load("awesomeface.png", &width, &height, &nrChannels, 0);
-    if(data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else 
-    {
-        printf("Failed to load texture!\n");
-    }
-    stbi_image_free(data);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    // ===================================================
-    // NOTE: Here is what you have to do, to use the code!
-    // ===================================================
-    int score = 0; 
-    int characterWidth = 183; 
-    int characterHeight = 256;
-    unsigned int scoreShader = 
-        compileAndLinkShaderProgram(scoreVertexShaderCode, scoreFragmentShaderCode);
-    char *textureFilePath = "numbers.png";
-    unsigned int textureSlot = 4;
-
-    score_info scoreInfo = setUpScore(characterWidth, characterHeight, scoreShader,
-                                      textureFilePath, textureSlot);
-    
-    // ===================================================
-    // ===================================================
-
-    glUseProgram(sceneShaderProgram);
-    // Texture for slot 0
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(glGetUniformLocation(sceneShaderProgram, "outTexture1"), 0);
-    // Texture for slot 1
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, texture2);
-    glUniform1i(glGetUniformLocation(sceneShaderProgram, "outTexture2"), 1);
-    glUseProgram(0);
-
-    // NOTE: Since this is a simple example, no fancy auto-layout things are being
-    // done. There are some interesting things to do that could possibly make the 
-    // code look a little cleaner and the API a lot simpler.
-    // Refer to: https://www.khronos.org/opengl/wiki/Vertex_Specification#Separate_attribute_format
-    // or: https://www.youtube.com/watch?v=oD1dvfbyf6A&list=PLlrATfBNZ98foTJPJ_Ev03o2oq3-GGOS2&index=14 
     unsigned int VAO;
     glGenVertexArrays(1, &VAO);
     glBindVertexArray(VAO);
@@ -199,68 +128,80 @@ int main(void)
     unsigned int VBO;
     glGenBuffers(1, &VBO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
     unsigned int EBO;
     glGenBuffers(1, &EBO);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(cubeIndices), cubeIndices, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
-    
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+
     glBindVertexArray(0);
 
-    double last = glfwGetTime();
-    double now = glfwGetTime();
+    // NOTE: bottom and top are flipped so that I can walk through the x-y-for 
+    // like I'm used to. This might change in the future.
+    glm::mat4 projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
 
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
 
-        now = glfwGetTime();
-        double delta = now - last;
-        if(delta >= 1)
-        {
-            ++score;
-            last = now;
-        } 
-
-        glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glClearColor(0.3f, 0.4f, 0.6f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
         
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime() * glm::radians(50.0f), glm::vec3(0.5f, 1.0f, 0.0f));
-        glm::mat4 view = glm::mat4(1.0f);
-        view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-        glm::mat4 projection = glm::mat4(1.0f);
-        projection = glm::perspective(glm::radians(45.0f), 1280.0f / 720.0f, 0.1f, 100.0f);
-
-        glUseProgram(sceneShaderProgram);
-        glUniformMatrix4fv(glGetUniformLocation(sceneShaderProgram, "model"), 1, GL_FALSE, glm::value_ptr(model));
-        glUniformMatrix4fv(glGetUniformLocation(sceneShaderProgram, "view"), 1, GL_FALSE, glm::value_ptr(view));
-        glUniformMatrix4fv(glGetUniformLocation(sceneShaderProgram, "projection"), 1, GL_FALSE, glm::value_ptr(projection));
-
         glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, sizeof(cubeIndices), GL_UNSIGNED_INT, 0);
+        glUseProgram(shaderProgram);
 
-        // ===================================================
-        // NOTE: Here is what you have to do, to use the code!
-        // ===================================================
-        
-        // Feel free to change the position 
-        glm::vec2 scorePosition = glm::vec2(0.1f, 0.5f);
-        float scoreScale = 1.0f;
+        glm::mat4 view = glm::translate(glm::mat4(1.0f), cameraPosition);
 
-        drawScore(score, scoreInfo, scorePosition, scoreScale);
+        // map            
+        for(int y = 0; y < 8; ++y)
+        {
+            for(int x = 0; x < 13; ++x)
+            {
+                if(map[x + (y * 13)])
+                {
+                    glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(x * 100.0f, y * 100.f, 0.0f));
 
-        // ===================================================
-        // ===================================================
-        
+                    glm::mat4 mvp = projection * view * model;
+                    int transformLocation = glGetUniformLocation(shaderProgram, "uMVP");
+                    glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+                    
+                    if(map[x + (y * 13)] == 1)
+                    {
+                        glm::vec3 color(0.8f, 0.6f, 0.4f);
+                        int fragColorLocation = glGetUniformLocation(shaderProgram, "uColor");
+                        glUniform3fv(fragColorLocation, 1, glm::value_ptr(color));
+                    } 
+                    else if(map[x + (y * 13)] == 2)
+                    {
+                        glm::vec3 color(0.2f, 0.8f, 0.3f);
+                        int fragColorLocation = glGetUniformLocation(shaderProgram, "uColor");
+                        glUniform3fv(fragColorLocation, 1, glm::value_ptr(color));
+                    }
+
+                    glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
+                }
+            }
+        }
+
+        // player
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), 
+                                         glm::vec3((1280.0f / 2.0f) - 50.0f, (720.f / 2.0f) - 50.0f, 0.0f));
+        glm::mat4 mvp = projection * model;
+        int transformLocation = glGetUniformLocation(shaderProgram, "uMVP");
+        glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(mvp));
+                    
+        glm::vec3 color(0.5f, 0.8f, 0.3f);
+        int fragColorLocation = glGetUniformLocation(shaderProgram, "uColor");
+        glUniform3fv(fragColorLocation, 1, glm::value_ptr(color));
+        glDrawElements(GL_TRIANGLES, sizeof(quadIndices), GL_UNSIGNED_INT, 0);
+                
 
         glfwSwapBuffers(window);
         glfwPollEvents();

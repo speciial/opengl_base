@@ -1,40 +1,29 @@
-/*
-    NOTE: These are super simple shader programs written for demonstration
-    purposes. Since these are not getting modified before loading and 
-    compilation, they are not loaded from external files. 
- */
+char *quadVertexShaderCode = R"(#version 460 core
+    layout (location = 0) in vec3 aPosition;
+    layout (location = 1) in vec2 aTexCoords;
 
-char *cubeVertexShaderCode = R"(#version 460 core
-    layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aColor;
-    layout (location = 2) in vec2 aTexCoord;
+    uniform vec3 uColor;
+    uniform mat4 uMVP;
 
-    out vec3 outColor;
-    out vec2 outTexCoord;
-
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
+    out vec3 fragColor;
 
     void main()
     {
-        gl_Position = projection * view * model * vec4(aPos, 1.0f);
-        outColor = aColor;
-        outTexCoord = aTexCoord;
-    } 
+        gl_Position = uMVP * vec4(aPosition, 1.0f);
+        fragColor = uColor;
+    }
+
 )";
 
-char *cubeFragmentShaderCode = R"(#version 460 core
-    in vec3 outColor;
-    in vec2 outTexCoord;    
+char *quadFragmentShaderCode = R"(#version 460 core
 
-    out vec4 FragColor;
+    in vec3 fragColor;
 
-    uniform sampler2D outTexture1;
-    uniform sampler2D outTexture2;
+    out vec4 color;
 
     void main()
     {
-        FragColor = vec4(outColor, 1.0f) * mix(texture(outTexture1, outTexCoord), texture(outTexture2, outTexCoord), 0.2f);
+        color = vec4(fragColor, 1.0f);
     }
+
 )";
