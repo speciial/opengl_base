@@ -1,6 +1,7 @@
 char *quadVertexShaderCode = R"(#version 460 core
     layout (location = 0) in vec3 aPosition;
-    layout (location = 1) in vec2 aTexCoords;
+    layout (location = 1) in vec3 aColor;
+    layout (location = 2) in vec2 aTexCoords;
 
     uniform vec3 uColor;
     uniform mat4 uMVP;

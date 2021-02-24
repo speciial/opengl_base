@@ -26,6 +26,8 @@ unsigned int map[13 * 8] = {
 
 glm::vec3 cameraPosition(0.0f, 0.0f, 0.0f);
 
+glm::vec3 playerPosition((1280.0f / 2.0f), (720.f / 2.0f), 0.0f);
+
 static unsigned int 
 compileAndLinkShaderProgram(char *vertexShaderCode, char *fragmentShaderCode)
 {
@@ -83,6 +85,19 @@ compileAndLinkShaderProgram(char *vertexShaderCode, char *fragmentShaderCode)
     return(result);
 }
 
+inline bool 
+checkPointForCollision(glm::vec3 point)
+{
+    bool result = false;
+    int tilePositionX = (int)(point.x / 100.0f);
+    int tilePositionY = (int)(point.y / 100.0f);
+    if(map[tilePositionX + (tilePositionY * 13)] == 0)
+    {
+        result = true;
+    }
+    return(result);
+}
+
 static void 
 processInput(GLFWwindow *window)
 {
@@ -90,13 +105,46 @@ processInput(GLFWwindow *window)
     {
         glfwSetWindowShouldClose(window, true);
     } 
+
+    // NOTE: _bad_ & _temoprary_ movement code
+    float directionX = 0;
+    float directionY = 0;
+    
+    float playerSpeed = 20.0f;
+    float timeStep = 1.0f;
+
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
     {  
-        cameraPosition.x += 20;
+        directionX = -1.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
     {
-        cameraPosition.x -= 20;
+        directionX = 1.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    {  
+        directionY = -1.0f;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+    {
+        directionY = 1.0f;
+    }
+
+    directionX = directionX * playerSpeed * timeStep;
+    directionY = directionY * playerSpeed * timeStep;
+
+    glm::vec3 newUpperLeft(playerPosition.x + directionX, playerPosition.y + directionY, 0.0f); 
+    glm::vec3 newLowerLeft(playerPosition.x + directionX, playerPosition.y + directionY + 99.0f, 0.0f); 
+    glm::vec3 newUpperRight(playerPosition.x + directionX + 99.0f, playerPosition.y + directionY, 0.0f); 
+    glm::vec3 newLowerRight(playerPosition.x + directionX + 99.0f, playerPosition.y + directionY + 99.0f, 0.0f); 
+    
+    if(checkPointForCollision(newUpperLeft) && 
+       checkPointForCollision(newLowerLeft) &&
+       checkPointForCollision(newUpperRight) &&
+       checkPointForCollision(newLowerRight))
+    {
+        playerPosition.x = newUpperLeft.x;
+        playerPosition.y = newUpperLeft.y;
     }
 }
 
@@ -136,15 +184,20 @@ int main(void)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(quadIndices), quadIndices, GL_STATIC_DRAW);
 
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
 
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(3 * sizeof(float)));
+
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
 
     glBindVertexArray(0);
 
-    // NOTE: bottom and top are flipped so that I can walk through the x-y-for 
-    // like I'm used to. This might change in the future.
+    // NOTE: my brain is not capable of thinking about the map when it is inverted
+    // so I flipped the y axis to make (0, 0) be the top left!
+    // There is likely a better and more elegant way of doing this with some simple
+    // math, but I cba to firgure that out right now.
     glm::mat4 projection = glm::ortho(0.0f, 1280.0f, 720.0f, 0.0f);
 
     while (!glfwWindowShouldClose(window))
@@ -191,8 +244,7 @@ int main(void)
         }
 
         // player
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), 
-                                         glm::vec3((1280.0f / 2.0f) - 50.0f, (720.f / 2.0f) - 50.0f, 0.0f));
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), playerPosition);
         glm::mat4 mvp = projection * model;
         int transformLocation = glGetUniformLocation(shaderProgram, "uMVP");
         glUniformMatrix4fv(transformLocation, 1, GL_FALSE, glm::value_ptr(mvp));
